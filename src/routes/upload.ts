@@ -4,7 +4,7 @@ import upload from '../middleware/upload';
 
 const router = express.Router();
 
-// Upload image (authors and above)
+// Upload image (authors who are users and above)
 router.post('/image', authenticate, authorOrAbove, upload.single('image'), (req, res) => {
   try {
     if (!req.file) {

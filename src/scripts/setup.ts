@@ -6,11 +6,11 @@ import Category from '../models/Category';
 dotenv.config();
 
 const defaultCategories = [
-  { name: 'Short Stories', description: 'Creative fictional narratives', order: 1 },
-  { name: 'Personal Essays', description: 'Personal reflections and experiences', order: 2 },
-  { name: 'Think Pieces', description: 'Analytical and opinion pieces', order: 3 },
-  { name: 'Articles', description: 'Informative and journalistic content', order: 4 },
-  { name: 'Non-Fiction', description: 'Factual and educational content', order: 5 }
+  { name: 'Short Stories', slug: 'short-stories', description: 'Creative fictional narratives', order: 1 },
+  { name: 'Personal Essays', slug: 'personal-essays', description: 'Personal reflections and experiences', order: 2 },
+  { name: 'Think Pieces', slug: 'think-pieces', description: 'Analytical and opinion pieces', order: 3 },
+  { name: 'Articles', slug: 'articles', description: 'Informative and journalistic content', order: 4 },
+  { name: 'Non-Fiction', slug: 'non-fiction', description: 'Factual and educational content', order: 5 }
 ];
 
 async function setupDatabase() {

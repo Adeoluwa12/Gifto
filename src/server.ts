@@ -1,9 +1,10 @@
 import express from 'express';
 import mongoose from 'mongoose';
-import cors from 'cors';
+import cors  from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
+import path from 'path';
 
 import authRoutes from './routes/auth';
 import categoryRoutes from './routes/categories';
@@ -13,14 +14,16 @@ import adminRoutes from './routes/admin';
 import submissionRoutes from './routes/submissions';
 import uploadRoutes from './routes/upload';
 import commentRoutes from './routes/comments';
+import profileRoutes from './routes/profile';
 
-dotenv.config();
+// Load environment variables
+dotenv.config({ path: '.env' });
 
 const app = express();
 
 // Security middleware
 app.use(helmet());
-app.use(cors());
+app.use(cors() as any);
 
 // Rate limiting
 const limiter = rateLimit({
@@ -37,7 +40,9 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use('/uploads', express.static('uploads'));
 
 // Database connection
-mongoose.connect(process.env.MONGODB_URI as string, {
+console.log('MONGODB_URI:', process.env.MONGODB_URI);
+const mongoUri = process.env.MONGODB_URI || 'mongodb+srv://Adeoluwa123:09014078564Feranmi@cluster0.r8sg61r.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
+mongoose.connect(mongoUri, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 } as mongoose.ConnectOptions)
@@ -53,6 +58,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/submissions', submissionRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/comments', commentRoutes);
+app.use('/api/profile', profileRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

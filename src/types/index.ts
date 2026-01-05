@@ -6,9 +6,19 @@ export interface IUser extends Document {
   email: string;
   password: string;
   name: string;
+  bio?: string;
+  profileImage?: string;
+  socialLinks?: {
+    twitter?: string;
+    instagram?: string;
+    linkedin?: string;
+    website?: string;
+  };
   role: 'super_admin' | 'admin' | 'author';
   isActive: boolean;
   createdBy?: mongoose.Types.ObjectId;
+  createdAt: Date;
+  updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
 }
 
@@ -18,6 +28,8 @@ export interface ICategory extends Document {
   description?: string;
   isActive: boolean;
   order: number;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface IPost extends Document {
@@ -41,6 +53,8 @@ export interface IPost extends Document {
   };
   downloadCount: number;
   isDownloadable: boolean;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface ICommunityMember extends Document {
@@ -49,6 +63,8 @@ export interface ICommunityMember extends Document {
   joinedAt: Date;
   isActive: boolean;
   emailVerified: boolean;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface IComment extends Document {
@@ -60,6 +76,8 @@ export interface IComment extends Document {
   isApproved: boolean;
   parentComment?: mongoose.Types.ObjectId;
   replies: mongoose.Types.ObjectId[];
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface ISubmission extends Document {
@@ -73,6 +91,8 @@ export interface ISubmission extends Document {
   reviewedBy?: mongoose.Types.ObjectId;
   reviewedAt?: Date;
   notes?: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface AuthRequest extends Request {

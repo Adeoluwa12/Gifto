@@ -20,6 +20,20 @@ const userSchema = new Schema<IUser>({
     required: true,
     trim: true
   },
+  bio: {
+    type: String,
+    trim: true,
+    maxlength: 500
+  },
+  profileImage: {
+    type: String
+  },
+  socialLinks: {
+    twitter: { type: String, trim: true },
+    instagram: { type: String, trim: true },
+    linkedin: { type: String, trim: true },
+    website: { type: String, trim: true }
+  },
   role: {
     type: String,
     enum: ['super_admin', 'admin', 'author'],
