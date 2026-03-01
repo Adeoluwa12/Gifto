@@ -1,0 +1,2345 @@
+openapi: 3.0.3
+info:
+  title: Nistar API
+  description: |
+    Nistar is a premium personal writing website for Gift Davies, featuring literary works, 
+    community engagement, admin management, and story submissions. Built with Node.js, Express, TypeScript, and MongoDB.
+  version: 1.0.0
+  contact:
+    name: Gift Davies
+    email: adeoyeoluwaferanmi@gmail.com
+  license:
+    name: MIT
+
+servers:
+  - url: https://menuchah-api.onrender.com/api
+    description: Production server
+  - url: http://localhost:3000/api
+    description: Development server
+
+security:
+  - BearerAuth: []
+
+paths:
+  # Authentication Endpoints
+  /auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: Register new author
+      description: Create a new author account
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - email
+                - password
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  example: "John Doe"
+                email:
+                  type: string
+                  format: email
+                  example: "john@example.com"
+                password:
+                  type: string
+                  minLength: 6
+                  example: "password123"
+      responses:
+        '201':
+          description: Author account created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Author account created successfully"
+                  token:
+                    type: string
+                    example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                  user:
+                    $ref: '#/components/schemas/UserResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: User login
+      description: Authenticate user and get access token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: "adeoyeoluwaferanmi@gmail.com"
+                password:
+                  type: string
+                  minLength: 6
+                  example: "password123"
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                  user:
+                    $ref: '#/components/schemas/UserResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /auth/me:
+    get:
+      tags:
+        - Authentication
+      summary: Get current user
+      description: Get current authenticated user information
+      responses:
+        '200':
+          description: Current user information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/UserResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /auth/create-admin:
+    post:
+      tags:
+        - Authentication
+      summary: Create admin user (Super Admin Only)
+      description: Create a new admin user account
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - email
+                - password
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  example: "Admin User"
+                email:
+                  type: string
+                  format: email
+                  example: "admin@example.com"
+                password:
+                  type: string
+                  minLength: 6
+                  example: "adminpass123"
+      responses:
+        '201':
+          description: Admin user created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Admin user created successfully"
+                  user:
+                    $ref: '#/components/schemas/UserResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /auth/change-password:
+    put:
+      tags:
+        - Authentication
+      summary: Change password
+      description: Change current user's password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - currentPassword
+                - newPassword
+              properties:
+                currentPassword:
+                  type: string
+                  minLength: 6
+                  example: "oldpassword123"
+                newPassword:
+                  type: string
+                  minLength: 6
+                  example: "newpassword123"
+      responses:
+        '200':
+          description: Password changed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Password changed successfully"
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  # Categories Endpoints
+  /categories:
+    get:
+      tags:
+        - Categories
+      summary: Get all categories
+      description: Get all active categories (public endpoint)
+      security: []
+      responses:
+        '200':
+          description: List of categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Category'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+    post:
+      tags:
+        - Categories
+      summary: Create category (Admin+)
+      description: Create a new category
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  example: "New Category"
+                description:
+                  type: string
+                  example: "Category description"
+                order:
+                  type: integer
+                  example: 5
+      responses:
+        '201':
+          description: Category created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /categories/{slug}:
+    get:
+      tags:
+        - Categories
+      summary: Get single category
+      description: Get category by slug (public endpoint)
+      security: []
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "short-stories"
+      responses:
+        '200':
+          description: Category details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /categories/{id}:
+    put:
+      tags:
+        - Categories
+      summary: Update category (Admin+)
+      description: Update an existing category
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "60d5ecb74b24a1234567890a"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  example: "Updated Category Name"
+                description:
+                  type: string
+                  example: "Updated description"
+                order:
+                  type: integer
+                  example: 3
+                isActive:
+                  type: boolean
+                  example: true
+      responses:
+        '200':
+          description: Category updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+    delete:
+      tags:
+        - Categories
+      summary: Delete category (Super Admin Only)
+      description: Delete a category
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "60d5ecb74b24a1234567890a"
+      responses:
+        '200':
+          description: Category deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Category deleted successfully"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  # Posts Endpoints
+  /posts:
+    get:
+      tags:
+        - Posts
+      summary: Get all posts
+      description: Get paginated list of published posts (public endpoint)
+      security: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          example: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 10
+          example: 10
+        - name: category
+          in: query
+          schema:
+            type: string
+          example: "short-stories"
+        - name: search
+          in: query
+          schema:
+            type: string
+          example: "keyword"
+        - name: author
+          in: query
+          schema:
+            type: string
+          example: "60d5ecb74b24a1234567890a"
+      responses:
+        '200':
+          description: List of posts with pagination
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  posts:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PostSummary'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+    post:
+      tags:
+        - Posts
+      summary: Create post (Authors+)
+      description: Create a new post
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - title
+                - content
+                - category
+              properties:
+                title:
+                  type: string
+                  example: "My Amazing Story"
+                description:
+                  type: string
+                  example: "A brief description of the story"
+                content:
+                  type: string
+                  example: "Full post content with HTML formatting..."
+                category:
+                  type: string
+                  example: "60d5ecb74b24a1234567890a"
+                excerpt:
+                  type: string
+                  example: "A brief excerpt..."
+                tags:
+                  type: array
+                  items:
+                    type: string
+                  example: ["fiction", "drama"]
+                status:
+                  type: string
+                  enum: ["draft", "published", "archived"]
+                  example: "draft"
+                isDownloadable:
+                  type: boolean
+                  example: true
+                fontSettings:
+                  type: object
+                  properties:
+                    fontFamily:
+                      type: string
+                      example: "Spectral, serif"
+                    fontSize:
+                      type: integer
+                      example: 16
+                    lineHeight:
+                      type: number
+                      example: 1.6
+                imageUrl:
+                  type: string
+                  format: uri
+                  example: "https://external-image.com/image.jpg"
+                image:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: Post created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /posts/{slug}:
+    get:
+      tags:
+        - Posts
+      summary: Get single post
+      description: Get post by slug (public endpoint)
+      security: []
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "art-of-storytelling"
+      responses:
+        '200':
+          description: Post details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  post:
+                    $ref: '#/components/schemas/Post'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /posts/{slug}/download:
+    get:
+      tags:
+        - Posts
+      summary: Download post as EPUB
+      description: Download post as EPUB file (public endpoint)
+      security: []
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "art-of-storytelling"
+      responses:
+        '200':
+          description: EPUB file download
+          content:
+            application/epub+zip:
+              schema:
+                type: string
+                format: binary
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /posts/my-posts:
+    get:
+      tags:
+        - Posts
+      summary: Get author's posts
+      description: Get current user's posts
+      responses:
+        '200':
+          description: List of author's posts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PostSummary'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /posts/{id}:
+    put:
+      tags:
+        - Posts
+      summary: Update post
+      description: Update post (Authors can update own posts, Admins can update any)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "60d5ecb74b24a1234567890a"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                content:
+                  type: string
+                category:
+                  type: string
+                excerpt:
+                  type: string
+                tags:
+                  type: array
+                  items:
+                    type: string
+                status:
+                  type: string
+                  enum: ["draft", "published", "archived"]
+                isDownloadable:
+                  type: boolean
+                fontSettings:
+                  type: object
+                imageUrl:
+                  type: string
+                  format: uri
+                image:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Post updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+    delete:
+      tags:
+        - Posts
+      summary: Delete post
+      description: Delete post (Authors can delete own posts, Admins can delete any)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "60d5ecb74b24a1234567890a"
+      responses:
+        '200':
+          description: Post deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Post deleted successfully"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    UserResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "60d5ecb74b24a1234567890a"
+        name:
+          type: string
+          example: "Gift Davies"
+        email:
+          type: string
+          format: email
+          example: "gift@nistar.com"
+        role:
+          type: string
+          enum: ["super_admin", "admin", "author"]
+          example: "super_admin"
+
+    Category:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: "60d5ecb74b24a1234567890a"
+        name:
+          type: string
+          example: "Short Stories"
+        slug:
+          type: string
+          example: "short-stories"
+        description:
+          type: string
+          example: "Creative fictional narratives"
+        isActive:
+          type: boolean
+          example: true
+        order:
+          type: integer
+          example: 1
+        createdAt:
+          type: string
+          format: date-time
+          example: "2024-01-01T00:00:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2024-01-01T00:00:00Z"
+
+    PostSummary:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: "60d5ecb74b24a1234567890a"
+        title:
+          type: string
+          example: "The Art of Storytelling"
+        slug:
+          type: string
+          example: "art-of-storytelling"
+        description:
+          type: string
+          example: "Exploring narrative techniques"
+        excerpt:
+          type: string
+          example: "A brief glimpse into storytelling..."
+        category:
+          type: object
+          properties:
+            _id:
+              type: string
+            name:
+              type: string
+            slug:
+              type: string
+        author:
+          type: object
+          properties:
+            _id:
+              type: string
+            name:
+              type: string
+            email:
+              type: string
+        status:
+          type: string
+          enum: ["draft", "published", "archived"]
+          example: "published"
+        publishedAt:
+          type: string
+          format: date-time
+          example: "2024-01-01T00:00:00Z"
+        featuredImage:
+          type: string
+          example: "/uploads/image.jpg"
+        tags:
+          type: array
+          items:
+            type: string
+          example: ["writing", "craft"]
+        readTime:
+          type: integer
+          example: 5
+        downloadCount:
+          type: integer
+          example: 25
+        isDownloadable:
+          type: boolean
+          example: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Post:
+      allOf:
+        - $ref: '#/components/schemas/PostSummary'
+        - type: object
+          properties:
+            content:
+              type: string
+              example: "Full post content with HTML formatting..."
+            imageUrl:
+              type: string
+              format: uri
+              example: "https://external-image.com/image.jpg"
+            fontSettings:
+              type: object
+              properties:
+                fontFamily:
+                  type: string
+                  example: "Spectral, serif"
+                fontSize:
+                  type: integer
+                  example: 18
+                lineHeight:
+                  type: number
+                  example: 1.7
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+          example: 1
+        limit:
+          type: integer
+          example: 10
+        total:
+          type: integer
+          example: 100
+        pages:
+          type: integer
+          example: 10
+
+    Error:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Error message"
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              message:
+                type: string
+
+  responses:
+    ValidationError:
+      description: Validation error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            message: "Validation failed"
+            errors:
+              - field: "email"
+                message: "Email is required"
+
+    UnauthorizedError:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            message: "Access denied. No token provided."
+
+    ForbiddenError:
+      description: Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            message: "Access denied. Insufficient permissions."
+
+    NotFoundError:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            message: "Resource not found"
+
+    ServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            message: "Something went wrong!"
+  # Community Endpoints
+  /community/join:
+    post:
+      tags:
+        - Community
+      summary: Join community
+      description: Join the community (public endpoint)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - email
+              properties:
+                name:
+                  type: string
+                  example: "John Doe"
+                email:
+                  type: string
+                  format: email
+                  example: "john@example.com"
+      responses:
+        '201':
+          description: Successfully joined the community
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Successfully joined the community!"
+                  member:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      name:
+                        type: string
+                      email:
+                        type: string
+                      joinedAt:
+                        type: string
+                        format: date-time
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /community/stats:
+    get:
+      tags:
+        - Community
+      summary: Get community stats (Admin+)
+      description: Get community statistics
+      responses:
+        '200':
+          description: Community statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  totalMembers:
+                    type: integer
+                    example: 1250
+                  newMembersThisMonth:
+                    type: integer
+                    example: 45
+                  pendingComments:
+                    type: integer
+                    example: 12
+                  totalComments:
+                    type: integer
+                    example: 456
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  # Comments Endpoints
+  /comments:
+    get:
+      tags:
+        - Comments
+      summary: Get all comments (Admin+)
+      description: Get paginated list of all comments
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: ["approved", "pending"]
+        - name: post
+          in: query
+          schema:
+            type: string
+          description: Filter by post ID
+      responses:
+        '200':
+          description: List of comments with pagination
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  comments:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Comment'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+    post:
+      tags:
+        - Comments
+      summary: Add comment
+      description: Add a comment to a post (public endpoint)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - post
+                - authorName
+                - authorEmail
+                - content
+              properties:
+                post:
+                  type: string
+                  example: "60d5ecb74b24a1234567890a"
+                authorName:
+                  type: string
+                  example: "John Doe"
+                authorEmail:
+                  type: string
+                  format: email
+                  example: "john@example.com"
+                content:
+                  type: string
+                  example: "This is a great post! I really enjoyed reading it."
+                parentComment:
+                  type: string
+                  example: "60d5ecb74b24a1234567890b"
+      responses:
+        '201':
+          description: Comment submitted for review
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Comment submitted for review"
+                  comment:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      authorName:
+                        type: string
+                      content:
+                        type: string
+                      createdAt:
+                        type: string
+                        format: date-time
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /comments/post/{postId}:
+    get:
+      tags:
+        - Comments
+      summary: Get comments for post
+      description: Get approved comments for a specific post (public endpoint)
+      security: []
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "60d5ecb74b24a1234567890a"
+      responses:
+        '200':
+          description: List of approved comments for the post
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CommentWithReplies'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /comments/pending:
+    get:
+      tags:
+        - Comments
+      summary: Get pending comments (Admin+)
+      description: Get paginated list of pending comments
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: List of pending comments with pagination
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  comments:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CommentWithPost'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /comments/{id}/approve:
+    put:
+      tags:
+        - Comments
+      summary: Approve/reject comment (Admin+)
+      description: Approve or reject a comment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "60d5ecb74b24a1234567890a"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - isApproved
+              properties:
+                isApproved:
+                  type: boolean
+                  example: true
+      responses:
+        '200':
+          description: Comment status updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Comment approved"
+                  comment:
+                    $ref: '#/components/schemas/Comment'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /comments/{id}:
+    delete:
+      tags:
+        - Comments
+      summary: Delete comment (Admin+)
+      description: Delete a comment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "60d5ecb74b24a1234567890a"
+      responses:
+        '200':
+          description: Comment deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Comment deleted successfully"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /comments/stats:
+    get:
+      tags:
+        - Comments
+      summary: Get comment statistics (Admin+)
+      description: Get comment statistics
+      responses:
+        '200':
+          description: Comment statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  totalComments:
+                    type: integer
+                    example: 1250
+                  approvedComments:
+                    type: integer
+                    example: 1100
+                  pendingComments:
+                    type: integer
+                    example: 150
+                  commentsThisMonth:
+                    type: integer
+                    example: 85
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  # Submissions Endpoints
+  /submissions:
+    get:
+      tags:
+        - Submissions
+      summary: Get all submissions (Admin+)
+      description: Get paginated list of story submissions
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: ["pending", "approved", "rejected"]
+        - name: category
+          in: query
+          schema:
+            type: string
+          description: Filter by category
+      responses:
+        '200':
+          description: List of submissions with pagination
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  submissions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SubmissionSummary'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+    post:
+      tags:
+        - Submissions
+      summary: Submit story
+      description: Submit a story for review (public endpoint)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+                - content
+                - authorName
+                - authorEmail
+                - category
+              properties:
+                title:
+                  type: string
+                  example: "My Amazing Story"
+                content:
+                  type: string
+                  example: "Once upon a time, in a land far away..."
+                authorName:
+                  type: string
+                  example: "Aspiring Writer"
+                authorEmail:
+                  type: string
+                  format: email
+                  example: "writer@email.com"
+                category:
+                  type: string
+                  example: "short-stories"
+      responses:
+        '201':
+          description: Submission received successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Submission received successfully! We will review it and get back to you."
+                  submission:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      title:
+                        type: string
+                      authorName:
+                        type: string
+                      category:
+                        type: string
+                      submittedAt:
+                        type: string
+                        format: date-time
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /submissions/{id}:
+    get:
+      tags:
+        - Submissions
+      summary: Get single submission (Admin+)
+      description: Get submission details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "60d5ecb74b24a1234567890a"
+      responses:
+        '200':
+          description: Submission details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Submission'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /submissions/{id}/review:
+    put:
+      tags:
+        - Submissions
+      summary: Review submission (Admin+)
+      description: Approve or reject a submission
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "60d5ecb74b24a1234567890a"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - status
+              properties:
+                status:
+                  type: string
+                  enum: ["approved", "rejected"]
+                  example: "approved"
+                notes:
+                  type: string
+                  example: "Great story! Minor edits needed before publication."
+      responses:
+        '200':
+          description: Submission reviewed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Submission approved"
+                  submission:
+                    $ref: '#/components/schemas/Submission'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /submissions/{id}/convert-to-post:
+    post:
+      tags:
+        - Submissions
+      summary: Convert submission to post (Admin+)
+      description: Convert approved submission to a published post
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "60d5ecb74b24a1234567890a"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - categoryId
+              properties:
+                categoryId:
+                  type: string
+                  example: "60d5ecb74b24a1234567890b"
+                tags:
+                  type: array
+                  items:
+                    type: string
+                  example: ["fiction", "drama", "contemporary"]
+                isDownloadable:
+                  type: boolean
+                  example: true
+      responses:
+        '200':
+          description: Submission converted to post successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Submission converted to post successfully"
+                  post:
+                    $ref: '#/components/schemas/Post'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  # Admin Endpoints
+  /admin/dashboard:
+    get:
+      tags:
+        - Admin
+      summary: Get dashboard stats (Admin+)
+      description: Get admin dashboard statistics
+      responses:
+        '200':
+          description: Dashboard statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  stats:
+                    type: object
+                    properties:
+                      totalPosts:
+                        type: integer
+                        example: 45
+                      publishedPosts:
+                        type: integer
+                        example: 38
+                      draftPosts:
+                        type: integer
+                        example: 7
+                      totalMembers:
+                        type: integer
+                        example: 1250
+                      pendingComments:
+                        type: integer
+                        example: 12
+                      pendingSubmissions:
+                        type: integer
+                        example: 8
+                  recentActivity:
+                    type: object
+                    properties:
+                      recentPosts:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/PostSummary'
+                      recentMembers:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/CommunityMember'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /admin/members:
+    get:
+      tags:
+        - Admin
+      summary: Get community members (Admin+)
+      description: Get paginated list of community members
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Search by name or email
+      responses:
+        '200':
+          description: List of community members with pagination
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  members:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CommunityMember'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /admin/members/{id}:
+    put:
+      tags:
+        - Admin
+      summary: Update member status (Admin+)
+      description: Update community member status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "60d5ecb74b24a1234567890a"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - isActive
+              properties:
+                isActive:
+                  type: boolean
+                  example: false
+      responses:
+        '200':
+          description: Member status updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Member status updated"
+                  member:
+                    $ref: '#/components/schemas/CommunityMember'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /admin/users:
+    get:
+      tags:
+        - Admin
+      summary: Get admin users (Super Admin Only)
+      description: Get list of admin and super admin users
+      responses:
+        '200':
+          description: List of admin users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AdminUser'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /admin/authors:
+    get:
+      tags:
+        - Admin
+      summary: Get all authors (Admin+)
+      description: Get paginated list of authors
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Search by name or email
+      responses:
+        '200':
+          description: List of authors with pagination
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  authors:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AuthorWithStats'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /admin/posts:
+    get:
+      tags:
+        - Admin
+      summary: Get all posts (Admin View)
+      description: Get paginated list of all posts with all statuses
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: ["draft", "published", "archived"]
+        - name: author
+          in: query
+          schema:
+            type: string
+          description: Filter by author ID
+      responses:
+        '200':
+          description: List of posts with pagination
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  posts:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PostSummary'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /admin/users/{id}/deactivate:
+    put:
+      tags:
+        - Admin
+      summary: Deactivate user (Super Admin Only)
+      description: Deactivate an admin user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "60d5ecb74b24a1234567890a"
+      responses:
+        '200':
+          description: User deactivated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "User deactivated successfully"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /admin/users/{id}:
+    delete:
+      tags:
+        - Admin
+      summary: Delete user (Super Admin Only)
+      description: Delete an admin user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "60d5ecb74b24a1234567890a"
+      responses:
+        '200':
+          description: User deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "User deleted successfully"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  # Profile Endpoints
+  /profile/{id}:
+    get:
+      tags:
+        - Profile
+      summary: Get user profile
+      description: Get public user profile (public endpoint)
+      security: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "60d5ecb74b24a1234567890a"
+      responses:
+        '200':
+          description: User profile with posts and stats
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/PublicProfile'
+                  posts:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PostSummary'
+                  stats:
+                    type: object
+                    properties:
+                      totalPosts:
+                        type: integer
+                        example: 25
+                      totalDownloads:
+                        type: integer
+                        example: 1250
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /profile/me/profile:
+    get:
+      tags:
+        - Profile
+      summary: Get own profile
+      description: Get current user's complete profile
+      responses:
+        '200':
+          description: Current user's profile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/FullProfile'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /profile/me:
+    put:
+      tags:
+        - Profile
+      summary: Update own profile
+      description: Update current user's profile
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: "Updated Name"
+                bio:
+                  type: string
+                  example: "Updated bio text describing the author's background and interests..."
+                socialLinks:
+                  type: object
+                  properties:
+                    twitter:
+                      type: string
+                      example: "https://twitter.com/newhandle"
+                    instagram:
+                      type: string
+                      example: "https://instagram.com/newhandle"
+                    linkedin:
+                      type: string
+                      example: "https://linkedin.com/in/newhandle"
+                    website:
+                      type: string
+                      example: "https://newwebsite.com"
+                profileImage:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Profile updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Profile updated successfully"
+                  user:
+                    $ref: '#/components/schemas/FullProfile'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  # Upload Endpoints
+  /upload/image:
+    post:
+      tags:
+        - Upload
+      summary: Upload image (Authors+)
+      description: Upload an image file
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - image
+              properties:
+                image:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Image uploaded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Image uploaded successfully"
+                  imageUrl:
+                    type: string
+                    example: "/uploads/image-1234567890.jpg"
+                  filename:
+                    type: string
+                    example: "image-1234567890.jpg"
+                  originalName:
+                    type: string
+                    example: "my-image.jpg"
+                  size:
+                    type: integer
+                    example: 1024000
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+    Comment:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: "60d5ecb74b24a1234567890a"
+        authorName:
+          type: string
+          example: "John Doe"
+        authorEmail:
+          type: string
+          format: email
+          example: "john@example.com"
+        content:
+          type: string
+          example: "This is a great post!"
+        isApproved:
+          type: boolean
+          example: true
+        parentComment:
+          type: string
+          nullable: true
+          example: null
+        createdAt:
+          type: string
+          format: date-time
+          example: "2024-01-01T00:00:00Z"
+
+    CommentWithReplies:
+      allOf:
+        - $ref: '#/components/schemas/Comment'
+        - type: object
+          properties:
+            replies:
+              type: array
+              items:
+                $ref: '#/components/schemas/Comment'
+
+    CommentWithPost:
+      allOf:
+        - $ref: '#/components/schemas/Comment'
+        - type: object
+          properties:
+            post:
+              type: object
+              properties:
+                _id:
+                  type: string
+                title:
+                  type: string
+                slug:
+                  type: string
+
+    SubmissionSummary:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: "60d5ecb74b24a1234567890a"
+        title:
+          type: string
+          example: "Story Title"
+        authorName:
+          type: string
+          example: "Author Name"
+        authorEmail:
+          type: string
+          format: email
+          example: "author@email.com"
+        category:
+          type: string
+          example: "short-stories"
+        status:
+          type: string
+          enum: ["pending", "approved", "rejected"]
+          example: "pending"
+        submittedAt:
+          type: string
+          format: date-time
+          example: "2024-01-01T00:00:00Z"
+        reviewedBy:
+          type: string
+          nullable: true
+          example: null
+        reviewedAt:
+          type: string
+          format: date-time
+          nullable: true
+          example: null
+        notes:
+          type: string
+          nullable: true
+          example: null
+
+    Submission:
+      allOf:
+        - $ref: '#/components/schemas/SubmissionSummary'
+        - type: object
+          properties:
+            content:
+              type: string
+              example: "Full story content..."
+
+    CommunityMember:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: "60d5ecb74b24a1234567890a"
+        name:
+          type: string
+          example: "John Doe"
+        email:
+          type: string
+          format: email
+          example: "john@example.com"
+        joinedAt:
+          type: string
+          format: date-time
+          example: "2024-01-01T00:00:00Z"
+        isActive:
+          type: boolean
+          example: true
+        emailVerified:
+          type: boolean
+          example: true
+
+    AdminUser:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: "60d5ecb74b24a1234567890a"
+        name:
+          type: string
+          example: "Gift Davies"
+        email:
+          type: string
+          format: email
+          example: "gift@nistar.com"
+        role:
+          type: string
+          enum: ["super_admin", "admin"]
+          example: "super_admin"
+        isActive:
+          type: boolean
+          example: true
+        createdBy:
+          type: object
+          nullable: true
+          properties:
+            _id:
+              type: string
+            name:
+              type: string
+            email:
+              type: string
+        createdAt:
+          type: string
+          format: date-time
+          example: "2024-01-01T00:00:00Z"
+
+    AuthorWithStats:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: "60d5ecb74b24a1234567890a"
+        name:
+          type: string
+          example: "Gift Davies"
+        email:
+          type: string
+          format: email
+          example: "gift@nistar.com"
+        role:
+          type: string
+          enum: ["super_admin", "admin", "author"]
+          example: "author"
+        isActive:
+          type: boolean
+          example: true
+        createdAt:
+          type: string
+          format: date-time
+          example: "2024-01-01T00:00:00Z"
+        stats:
+          type: object
+          properties:
+            totalPosts:
+              type: integer
+              example: 25
+            publishedPosts:
+              type: integer
+              example: 20
+
+    PublicProfile:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: "60d5ecb74b24a1234567890a"
+        name:
+          type: string
+          example: "Gift Davies"
+        email:
+          type: string
+          format: email
+          example: "gift@nistar.com"
+        bio:
+          type: string
+          example: "Award-winning author and storyteller with a passion for literary excellence..."
+        profileImage:
+          type: string
+          example: "/uploads/gift-profile.jpg"
+        socialLinks:
+          type: object
+          properties:
+            twitter:
+              type: string
+              example: "https://twitter.com/giftdavies"
+            instagram:
+              type: string
+              example: "https://instagram.com/giftdavies"
+            linkedin:
+              type: string
+              example: "https://linkedin.com/in/giftdavies"
+            website:
+              type: string
+              example: "https://giftdavies.com"
+        createdAt:
+          type: string
+          format: date-time
+          example: "2024-01-01T00:00:00Z"
+
+    FullProfile:
+      allOf:
+        - $ref: '#/components/schemas/PublicProfile'
+        - type: object
+          properties:
+            role:
+              type: string
+              enum: ["super_admin", "admin", "author"]
+              example: "super_admin"
+
+tags:
+  - name: Authentication
+    description: User authentication and account management
+  - name: Categories
+    description: Content categories management
+  - name: Posts
+    description: Blog posts and articles management
+  - name: Community
+    description: Community membership management
+  - name: Comments
+    description: Comments and moderation
+  - name: Submissions
+    description: Story submissions management
+  - name: Admin
+    description: Administrative functions
+  - name: Profile
+    description: User profiles management
+  - name: Upload
+    description: File upload functionality
